@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <stdexcept>
+#include <new>
 
 namespace sjtu {
 
@@ -16,28 +17,22 @@ private:
         size_t capacity;
         
         Block() : data(nullptr), capacity(BLOCK_SIZE) {
-            data = new T[capacity];
+            data = (T*)operator new(capacity * sizeof(T));
         }
         
         ~Block() {
-            delete[] data;
+            operator delete(data);
         }
         
         Block(const Block& other) : data(nullptr), capacity(other.capacity) {
-            data = new T[capacity];
-            for (size_t i = 0; i < capacity; ++i) {
-                data[i] = other.data[i];
-            }
+            data = (T*)operator new(capacity * sizeof(T));
         }
         
         Block& operator=(const Block& other) {
             if (this != &other) {
-                delete[] data;
+                operator delete(data);
                 capacity = other.capacity;
-                data = new T[capacity];
-                for (size_t i = 0; i < capacity; ++i) {
-                    data[i] = other.data[i];
-                }
+                data = (T*)operator new(capacity * sizeof(T));
             }
             return *this;
         }
@@ -346,16 +341,21 @@ public:
         front_index = other.front_index;
         back_block = other.back_block;
         back_index = other.back_index;
-        element_count = other.element_count;
+        element_count = 0;
         
         for (size_t i = front_block; i <= back_block; ++i) {
             if (other.blocks[i] != nullptr) {
-                blocks[i] = new Block(*other.blocks[i]);
+                blocks[i] = new Block();
             }
+        }
+        
+        for (size_t i = 0; i < other.element_count; ++i) {
+            push_back(other.at(i));
         }
     }
     
     ~deque() {
+        clear();
         for (size_t i = 0; i < block_capacity; ++i) {
             if (blocks[i] != nullptr) {
                 delete blocks[i];
@@ -366,6 +366,8 @@ public:
     
     deque& operator=(const deque& other) {
         if (this == &other) return *this;
+        
+        clear();
         
         for (size_t i = 0; i < block_capacity; ++i) {
             if (blocks[i] != nullptr) {
@@ -385,12 +387,16 @@ public:
         front_index = other.front_index;
         back_block = other.back_block;
         back_index = other.back_index;
-        element_count = other.element_count;
+        element_count = 0;
         
         for (size_t i = front_block; i <= back_block; ++i) {
             if (other.blocks[i] != nullptr) {
-                blocks[i] = new Block(*other.blocks[i]);
+                blocks[i] = new Block();
             }
+        }
+        
+        for (size_t i = 0; i < other.element_count; ++i) {
+            push_back(other.at(i));
         }
         
         return *this;
@@ -491,23 +497,14 @@ public:
     }
     
     void clear() {
-        for (size_t i = 0; i < block_capacity; ++i) {
-            if (blocks[i] != nullptr) {
-                delete blocks[i];
-                blocks[i] = nullptr;
-            }
+        while (element_count > 0) {
+            pop_back();
         }
-        
-        block_count = 1;
-        front_block = back_block = block_capacity / 2;
-        blocks[front_block] = new Block();
-        front_index = back_index = BLOCK_SIZE / 2;
-        element_count = 0;
     }
     
     void push_back(const T& value) {
         if (element_count == 0) {
-            blocks[back_block]->data[back_index] = value;
+            new (&blocks[back_block]->data[back_index]) T(value);
             element_count++;
             return;
         }
@@ -527,7 +524,7 @@ public:
             }
         }
         
-        blocks[back_block]->data[back_index] = value;
+        new (&blocks[back_block]->data[back_index]) T(value);
         element_count++;
     }
     
@@ -536,6 +533,7 @@ public:
             throw std::runtime_error("Container is empty");
         }
         
+        blocks[back_block]->data[back_index].~T();
         element_count--;
         
         if (element_count == 0) {
@@ -554,7 +552,7 @@ public:
     
     void push_front(const T& value) {
         if (element_count == 0) {
-            blocks[front_block]->data[front_index] = value;
+            new (&blocks[front_block]->data[front_index]) T(value);
             element_count++;
             return;
         }
@@ -575,7 +573,7 @@ public:
             front_index--;
         }
         
-        blocks[front_block]->data[front_index] = value;
+        new (&blocks[front_block]->data[front_index]) T(value);
         element_count++;
     }
     
@@ -584,6 +582,7 @@ public:
             throw std::runtime_error("Container is empty");
         }
         
+        blocks[front_block]->data[front_index].~T();
         element_count--;
         
         if (element_count == 0) {
@@ -597,6 +596,57 @@ public:
             front_block++;
             front_index = 0;
         }
+    }
+    
+    iterator insert(iterator pos, const T& value) {
+        if (pos.container != this) {
+            throw std::runtime_error("Invalid iterator");
+        }
+        
+        if (pos == end()) {
+            push_back(value);
+            return iterator(this, back_block, back_index);
+        }
+        
+        if (pos == begin()) {
+            push_front(value);
+            return begin();
+        }
+        
+        size_t insert_pos = pos - begin();
+        push_back(at(element_count - 1));
+        
+        for (size_t i = element_count - 2; i > insert_pos; --i) {
+            at(i) = at(i - 1);
+        }
+        
+        at(insert_pos) = value;
+        
+        return begin() + insert_pos;
+    }
+    
+    iterator erase(iterator pos) {
+        if (pos.container != this) {
+            throw std::runtime_error("Invalid iterator");
+        }
+        
+        if (pos == end()) {
+            throw std::runtime_error("Cannot erase end iterator");
+        }
+        
+        size_t erase_pos = pos - begin();
+        
+        for (size_t i = erase_pos; i < element_count - 1; ++i) {
+            at(i) = at(i + 1);
+        }
+        
+        pop_back();
+        
+        if (erase_pos >= element_count) {
+            return end();
+        }
+        
+        return begin() + erase_pos;
     }
 };
 
