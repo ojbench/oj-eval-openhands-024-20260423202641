@@ -377,9 +377,18 @@ public:
             throw std::out_of_range("Index out of range");
         }
         
-        iterator it = begin();
-        it += pos;
-        return *it;
+        size_t curr_block = front_block;
+        size_t curr_index = front_index;
+        
+        for (size_t i = 0; i < pos; ++i) {
+            curr_index++;
+            if (curr_index >= BLOCK_SIZE) {
+                curr_block++;
+                curr_index = 0;
+            }
+        }
+        
+        return blocks[curr_block]->data[curr_index];
     }
     
     const T& at(const size_t& pos) const {
@@ -387,9 +396,18 @@ public:
             throw std::out_of_range("Index out of range");
         }
         
-        const_iterator it = cbegin();
-        it += pos;
-        return *it;
+        size_t curr_block = front_block;
+        size_t curr_index = front_index;
+        
+        for (size_t i = 0; i < pos; ++i) {
+            curr_index++;
+            if (curr_index >= BLOCK_SIZE) {
+                curr_block++;
+                curr_index = 0;
+            }
+        }
+        
+        return blocks[curr_block]->data[curr_index];
     }
     
     T& operator[](const size_t& pos) {
