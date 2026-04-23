@@ -111,23 +111,15 @@ public:
         }
         
         iterator& operator+=(const int& n) {
-            if (n == 0) return *this;
-            
-            int current_pos = (block_idx - container->front_block) * BLOCK_SIZE + elem_idx - container->front_index;
-            int new_pos = current_pos + n;
-            
-            if (new_pos < 0 || new_pos > (int)container->element_count) {
-                throw std::runtime_error("Iterator out of bounds");
+            if (n > 0) {
+                for (int i = 0; i < n; ++i) {
+                    ++(*this);
+                }
+            } else if (n < 0) {
+                for (int i = 0; i < -n; ++i) {
+                    --(*this);
+                }
             }
-            
-            block_idx = container->front_block + new_pos / BLOCK_SIZE;
-            elem_idx = container->front_index + new_pos % BLOCK_SIZE;
-            
-            if (elem_idx >= BLOCK_SIZE) {
-                block_idx++;
-                elem_idx -= BLOCK_SIZE;
-            }
-            
             return *this;
         }
         
@@ -235,23 +227,15 @@ public:
         }
         
         const_iterator& operator+=(const int& n) {
-            if (n == 0) return *this;
-            
-            int current_pos = (block_idx - container->front_block) * BLOCK_SIZE + elem_idx - container->front_index;
-            int new_pos = current_pos + n;
-            
-            if (new_pos < 0 || new_pos > (int)container->element_count) {
-                throw std::runtime_error("Iterator out of bounds");
+            if (n > 0) {
+                for (int i = 0; i < n; ++i) {
+                    ++(*this);
+                }
+            } else if (n < 0) {
+                for (int i = 0; i < -n; ++i) {
+                    --(*this);
+                }
             }
-            
-            block_idx = container->front_block + new_pos / BLOCK_SIZE;
-            elem_idx = container->front_index + new_pos % BLOCK_SIZE;
-            
-            if (elem_idx >= BLOCK_SIZE) {
-                block_idx++;
-                elem_idx -= BLOCK_SIZE;
-            }
-            
             return *this;
         }
         
@@ -407,11 +391,9 @@ public:
             throw std::out_of_range("Index out of range");
         }
         
-        size_t target_pos = pos + front_index;
-        size_t target_block = front_block + target_pos / BLOCK_SIZE;
-        size_t target_index = target_pos % BLOCK_SIZE;
-        
-        return blocks[target_block]->data[target_index];
+        iterator it = begin();
+        it += pos;
+        return *it;
     }
     
     const T& at(const size_t& pos) const {
@@ -419,11 +401,9 @@ public:
             throw std::out_of_range("Index out of range");
         }
         
-        size_t target_pos = pos + front_index;
-        size_t target_block = front_block + target_pos / BLOCK_SIZE;
-        size_t target_index = target_pos % BLOCK_SIZE;
-        
-        return blocks[target_block]->data[target_index];
+        const_iterator it = cbegin();
+        it += pos;
+        return *it;
     }
     
     T& operator[](const size_t& pos) {
