@@ -314,24 +314,17 @@ public:
     }
     
     deque(const deque& other) {
-        block_capacity = other.block_capacity;
+        block_capacity = 8;
         blocks = new Block*[block_capacity];
         for (size_t i = 0; i < block_capacity; ++i) {
             blocks[i] = nullptr;
         }
         
-        block_count = other.block_count;
-        front_block = other.front_block;
-        front_index = other.front_index;
-        back_block = other.back_block;
-        back_index = other.back_index;
+        block_count = 1;
+        front_block = back_block = block_capacity / 2;
+        blocks[front_block] = new Block();
+        front_index = back_index = BLOCK_SIZE / 2;
         element_count = 0;
-        
-        for (size_t i = front_block; i <= back_block; ++i) {
-            if (other.blocks[i] != nullptr) {
-                blocks[i] = new Block();
-            }
-        }
         
         for (size_t i = 0; i < other.element_count; ++i) {
             push_back(other.at(i));
@@ -360,24 +353,17 @@ public:
         }
         delete[] blocks;
         
-        block_capacity = other.block_capacity;
+        block_capacity = 8;
         blocks = new Block*[block_capacity];
         for (size_t i = 0; i < block_capacity; ++i) {
             blocks[i] = nullptr;
         }
         
-        block_count = other.block_count;
-        front_block = other.front_block;
-        front_index = other.front_index;
-        back_block = other.back_block;
-        back_index = other.back_index;
+        block_count = 1;
+        front_block = back_block = block_capacity / 2;
+        blocks[front_block] = new Block();
+        front_index = back_index = BLOCK_SIZE / 2;
         element_count = 0;
-        
-        for (size_t i = front_block; i <= back_block; ++i) {
-            if (other.blocks[i] != nullptr) {
-                blocks[i] = new Block();
-            }
-        }
         
         for (size_t i = 0; i < other.element_count; ++i) {
             push_back(other.at(i));
